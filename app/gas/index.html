@@ -8,13 +8,14 @@
       body { font-family: sans-serif; padding: 15px; background: #f8f9fa; }
       .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
       h3 { color: #333; text-align: center; }
-      .field { margin-bottom: 25px; }
+      .field { margin-bottom: 20px; }
       label { display: block; font-weight: bold; margin-bottom: 5px; }
-      .axis-label { font-size: 0.8em; color: #777; text-align: center; margin-bottom: 10px; }
+      .axis-label { font-size: 0.8em; color: #777; margin-bottom: 8px; }
       input[type="range"] { width: 100%; cursor: pointer; }
-      .val-display { text-align: center; font-size: 1.1em; font-weight: bold; color: #4CAF50; margin-top: 5px; }
-      button { width: 100%; padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-      button:active { background: #388E3C; transform: scale(0.98); }
+      input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+      .val-display { text-align: center; font-size: 1.2em; font-weight: bold; color: #4CAF50; }
+      button { width: 100%; padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+      #chart-container { margin-top: 30px; }
     </style>
   </head>
   <body>
@@ -22,22 +23,24 @@
       <h3>Manus メンタルマップ</h3>
       
       <div class="field">
-        <label>感情 (x)</label>
-        <div class="axis-label">← しんどい (-100) / うれしい (+100) →</div>
+        <label>感情 (x: -100 〜 100)</label>
+        <div class="axis-label">この数値の状態を一言で言うと？ (例: 絶望、穏やか)</div>
+        <input type="text" id="em-desc" placeholder="この時の感情の状態を入力...">
         <input type="range" id="emotion" min="-100" max="100" value="0" oninput="document.getElementById('em-val').innerText = this.value">
         <div id="em-val" class="val-display">0</div>
       </div>
 
       <div class="field">
-        <label>身体エネルギー (y)</label>
-        <div class="axis-label">← ぐったり (-100) / みなぎる (+100) →</div>
+        <label>エネルギー (y: -100 〜 100)</label>
+        <div class="axis-label">この数値の状態を一言で言うと？ (例: 枯渇、充実)</div>
+        <input type="text" id="en-desc" placeholder="この時のエネルギー状態を入力...">
         <input type="range" id="energy" min="-100" max="100" value="0" oninput="document.getElementById('en-val').innerText = this.value">
         <div id="en-val" class="val-display">0</div>
       </div>
 
-      <button onclick="submitData()">記録してマップを更新</button>
+      <button onclick="submitData()">自分の言葉で記録する</button>
 
-      <div style="margin-top: 30px;">
+      <div id="chart-container">
         <canvas id="emotionChart"></canvas>
       </div>
     </div>
@@ -46,15 +49,6 @@
       let chart;
       window.onload = () => { google.script.run.withSuccessHandler(drawChart).getLogs(); };
 
-      // 数値から状態（コメント）を判定する
-      function getStatusText(x, y) {
-        if (x >= 0 && y >= 0) return "【理想】うれしい × みなぎる";
-        if (x < 0 && y >= 0) return "【緊張/不安】しんどい × みなぎる";
-        if (x < 0 && y < 0) return "【疲労/絶望】しんどい × ぐったり";
-        if (x >= 0 && y < 0) return "【リラックス】うれしい × ぐったり";
-        return "";
-      }
-
       function drawChart(logs) {
         const ctx = document.getElementById('emotionChart').getContext('2d');
         if (chart) chart.destroy();
@@ -62,11 +56,14 @@
           type: 'scatter',
           data: {
             datasets: [{
-              label: '過去の記録',
-              data: logs.map(row => ({ x: row.emotion, y: row.energy })),
+              label: '自分の記録',
+              data: logs.map(row => ({ 
+                x: row.emotion, 
+                y: row.energy, 
+                desc: `感情: ${row.em_desc} / エネ: ${row.en_desc}` 
+              })),
               backgroundColor: 'rgba(76, 175, 80, 0.6)',
-              pointRadius: 7,
-              pointHoverRadius: 10
+              pointRadius: 8
             }]
           },
           options: {
@@ -74,16 +71,17 @@
               tooltip: {
                 callbacks: {
                   label: (context) => {
-                    const x = context.raw.x;
-                    const y = context.raw.y;
-                    return [`感情: ${x}`, `エネルギー: ${y}`, `状態: ${getStatusText(x, y)}` ];
+                    return [
+                      `スコア: (${context.raw.x}, ${context.raw.y})`,
+                      context.raw.desc
+                    ];
                   }
                 }
               }
             },
             scales: {
-              x: { title: { display: true, text: '感情' }, min: -100, max: 100 },
-              y: { title: { display: true, text: 'エネルギー' }, min: -100, max: 100 }
+              x: { min: -100, max: 100, title: { display: true, text: '感情' } },
+              y: { min: -100, max: 100, title: { display: true, text: 'エネルギー' } }
             }
           }
         });
@@ -92,10 +90,14 @@
       function submitData() {
         const data = {
           emotion: Number(document.getElementById('emotion').value),
-          energy: Number(document.getElementById('energy').value)
+          energy: Number(document.getElementById('energy').value),
+          em_desc: document.getElementById('em-desc').value || "未定義",
+          en_desc: document.getElementById('en-desc').value || "未定義"
         };
         google.script.run.withSuccessHandler(() => {
-          alert('記録しました！');
+          alert('あなたの言葉で記録しました。');
+          document.getElementById('em-desc').value = '';
+          document.getElementById('en-desc').value = '';
           google.script.run.withSuccessHandler(drawChart).getLogs();
         }).recordToSheet(data);
       }
