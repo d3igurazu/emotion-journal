@@ -3,47 +3,84 @@
   <head>
     <base target="_top">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Manus - 感情記録</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-      body { font-family: sans-serif; padding: 20px; }
+      body { font-family: sans-serif; padding: 15px; background: #f8f9fa; }
+      .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+      h3 { color: #333; text-align: center; margin-top: 0; }
       .field { margin-bottom: 20px; }
-      label { display: block; font-weight: bold; margin-bottom: 5px; }
-      input[type="range"] { width: 100%; }
-      button { width: 100%; padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 5px; font-size: 16px; }
+      label { display: block; font-weight: bold; margin-bottom: 8px; color: #555; }
+      input[type="range"] { width: 100%; margin: 10px 0; }
+      .val-display { text-align: center; font-size: 1.2em; font-weight: bold; color: #4CAF50; }
+      button { width: 100%; padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+      button:active { background: #388E3C; transform: scale(0.98); }
+      #chart-container { margin-top: 30px; }
     </style>
   </head>
   <body>
-    <h3>感情記録 (Manus)</h3>
-    <div class="field">
-      <label>感情スコア (-5 〜 +5)</label>
-      <input type="range" id="emotion" min="-5" max="5" value="0" oninput="this.nextElementSibling.value = this.value">
-      <output>0</output>
+    <div class="card">
+      <h3>Manus 感情記録</h3>
+      
+      <div class="field">
+        <label>感情スコア (-5 〜 +5)</label>
+        <input type="range" id="emotion" min="-5" max="5" value="0" oninput="document.getElementById('em-val').innerText = this.value">
+        <div id="em-val" class="val-display">0</div>
+      </div>
+
+      <div class="field">
+        <label>身体エネルギー (0 〜 10)</label>
+        <input type="range" id="energy" min="0" max="10" value="5" oninput="document.getElementById('en-val').innerText = this.value">
+        <div id="en-val" class="val-display">5</div>
+      </div>
+
+      <button onclick="submitData()">記録してグラフを更新</button>
+
+      <div id="chart-container">
+        <canvas id="emotionChart"></canvas>
+      </div>
     </div>
-    <div class="field">
-      <label>身体エネルギー (0 〜 10)</label>
-      <input type="range" id="energy" min="0" max="10" value="5" oninput="this.nextElementSibling.value = this.value">
-      <output>5</output>
-    </div>
-    <div class="field">
-      <label>感情ラベル（任意）</label>
-      <input type="text" id="label" placeholder="例：穏やか、イライラ">
-    </div>
-    <div class="field">
-      <label>メモ（任意）</label>
-      <textarea id="memo" rows="3" style="width: 100%;"></textarea>
-    </div>
-    <button onclick="submitData()">記録する</button>
 
     <script>
+      let chart;
+
+      // ページ読み込み時にグラフを表示
+      window.onload = () => {
+        google.script.run.withSuccessHandler(drawChart).getLogs();
+      };
+
+      function drawChart(logs) {
+        const ctx = document.getElementById('emotionChart').getContext('2d');
+        if (chart) chart.destroy(); // 古いグラフを破棄
+
+        chart = new Chart(ctx, {
+          type: 'scatter',
+          data: {
+            datasets: [{
+              label: '心の状態',
+              data: logs.map(row => ({ x: row.emotion, y: row.energy })),
+              backgroundColor: '#4CAF50',
+              pointRadius: 6
+            }]
+          },
+          options: {
+            scales: {
+              x: { title: { display: true, text: '感情' }, min: -5, max: 5 },
+              y: { title: { display: true, text: 'エネルギー' }, min: 0, max: 10 }
+            }
+          }
+        });
+      }
+
       function submitData() {
         const data = {
           emotion: document.getElementById('emotion').value,
-          energy: document.getElementById('energy').value,
-          label: document.getElementById('label').value,
-          memo: document.getElementById('memo').value
+          energy: document.getElementById('energy').value
         };
+        
         google.script.run.withSuccessHandler(() => {
           alert('記録しました！');
+          // 記録後にグラフを再読み込み
+          google.script.run.withSuccessHandler(drawChart).getLogs();
         }).recordToSheet(data);
       }
     </script>
