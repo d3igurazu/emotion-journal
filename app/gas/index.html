@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Manus - 感情記録</title>
+    <style>
+      body { font-family: sans-serif; padding: 20px; }
+      .field { margin-bottom: 20px; }
+      label { display: block; font-weight: bold; margin-bottom: 5px; }
+      input[type="range"] { width: 100%; }
+      button { width: 100%; padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 5px; font-size: 16px; }
+    </style>
+  </head>
+  <body>
+    <h3>感情記録 (Manus)</h3>
+    <div class="field">
+      <label>感情スコア (-5 〜 +5)</label>
+      <input type="range" id="emotion" min="-5" max="5" value="0" oninput="this.nextElementSibling.value = this.value">
+      <output>0</output>
+    </div>
+    <div class="field">
+      <label>身体エネルギー (0 〜 10)</label>
+      <input type="range" id="energy" min="0" max="10" value="5" oninput="this.nextElementSibling.value = this.value">
+      <output>5</output>
+    </div>
+    <div class="field">
+      <label>感情ラベル（任意）</label>
+      <input type="text" id="label" placeholder="例：穏やか、イライラ">
+    </div>
+    <div class="field">
+      <label>メモ（任意）</label>
+      <textarea id="memo" rows="3" style="width: 100%;"></textarea>
+    </div>
+    <button onclick="submitData()">記録する</button>
+
+    <script>
+      function submitData() {
+        const data = {
+          emotion: document.getElementById('emotion').value,
+          energy: document.getElementById('energy').value,
+          label: document.getElementById('label').value,
+          memo: document.getElementById('memo').value
+        };
+        google.script.run.withSuccessHandler(() => {
+          alert('記録しました！');
+        }).recordToSheet(data);
+      }
+    </script>
+  </body>
+</html>
