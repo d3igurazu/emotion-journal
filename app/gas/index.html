@@ -13,19 +13,6 @@
       .axis-label { font-size: 0.8em; color: #777; text-align: center; margin-bottom: 10px; }
       input[type="range"] { width: 100%; cursor: pointer; }
       .val-display { text-align: center; font-size: 1.1em; font-weight: bold; color: #4CAF50; margin-top: 5px; }
-      
-      /* 状態コメントを表示するエリアのスタイル */
-      #status-box { 
-        text-align: center; 
-        background: #e8f5e9; 
-        padding: 10px; 
-        border-radius: 8px; 
-        margin-bottom: 20px; 
-        font-weight: bold; 
-        color: #2e7d32;
-        border: 1px solid #c8e6c9;
-      }
-
       button { width: 100%; padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
       button:active { background: #388E3C; transform: scale(0.98); }
     </style>
@@ -37,19 +24,15 @@
       <div class="field">
         <label>感情 (x)</label>
         <div class="axis-label">← しんどい (-100) / うれしい (+100) →</div>
-        <input type="range" id="emotion" min="-100" max="100" value="0" oninput="updateUI()">
+        <input type="range" id="emotion" min="-100" max="100" value="0" oninput="document.getElementById('em-val').innerText = this.value">
         <div id="em-val" class="val-display">0</div>
       </div>
 
       <div class="field">
         <label>身体エネルギー (y)</label>
         <div class="axis-label">← ぐったり (-100) / みなぎる (+100) →</div>
-        <input type="range" id="energy" min="-100" max="100" value="0" oninput="updateUI()">
+        <input type="range" id="energy" min="-100" max="100" value="0" oninput="document.getElementById('en-val').innerText = this.value">
         <div id="en-val" class="val-display">0</div>
-      </div>
-
-      <div id="status-box">
-        状態：<span id="current-status">ふつう</span>
       </div>
 
       <button onclick="submitData()">記録してマップを更新</button>
@@ -61,30 +44,16 @@
 
     <script>
       let chart;
+      window.onload = () => { google.script.run.withSuccessHandler(drawChart).getLogs(); };
 
-      // 状態テキストを判定する共通ルール
+      // 数値から状態（コメント）を判定する
       function getStatusText(x, y) {
-        if (x == 0 && y == 0) return "ふつう";
         if (x >= 0 && y >= 0) return "【理想】うれしい × みなぎる";
         if (x < 0 && y >= 0) return "【緊張/不安】しんどい × みなぎる";
         if (x < 0 && y < 0) return "【疲労/絶望】しんどい × ぐったり";
         if (x >= 0 && y < 0) return "【リラックス】うれしい × ぐったり";
         return "";
       }
-
-      // スライダーを動かした時に画面表示を更新する
-      function updateUI() {
-        const x = document.getElementById('emotion').value;
-        const y = document.getElementById('energy').value;
-        document.getElementById('em-val').innerText = x;
-        document.getElementById('en-val').innerText = y;
-        document.getElementById('current-status').innerText = getStatusText(x, y);
-      }
-
-      window.onload = () => { 
-        updateUI();
-        google.script.run.withSuccessHandler(drawChart).getLogs(); 
-      };
 
       function drawChart(logs) {
         const ctx = document.getElementById('emotionChart').getContext('2d');
