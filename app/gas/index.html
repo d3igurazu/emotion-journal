@@ -8,12 +8,11 @@
       body { font-family: sans-serif; padding: 15px; background: #f8f9fa; }
       .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
       h3 { color: #333; text-align: center; }
-      .field { margin-bottom: 25px; }
+      .field { margin-bottom: 20px; }
       label { display: block; font-weight: bold; margin-bottom: 5px; }
-      .desc { font-size: 0.85em; color: #666; margin-bottom: 8px; }
-      input[type="range"] { width: 100%; cursor: pointer; }
-      .val-display { text-align: center; font-size: 1.1em; font-weight: bold; color: #4CAF50; margin-top: 5px; }
-      .comment { text-align: center; font-size: 0.9em; color: #888; min-height: 1.2em; }
+      input[type="range"] { width: 100%; }
+      input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+      .val-display { text-align: center; font-size: 1.1em; font-weight: bold; color: #4CAF50; }
       button { width: 100%; padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
     </style>
   </head>
@@ -22,22 +21,23 @@
       <h3>Manus 感情 × エネルギー</h3>
       
       <div class="field">
-        <label>感情 (x軸: -100 〜 100)</label>
-        <div class="desc">左：しんどい / 右：うれしい</div>
-        <input type="range" id="emotion" min="-100" max="100" value="0" oninput="updateLabels()">
+        <label>感情 (x: -100 〜 100)</label>
+        <input type="range" id="emotion" min="-100" max="100" value="0" oninput="document.getElementById('em-val').innerText = this.value">
         <div id="em-val" class="val-display">0</div>
-        <div id="em-comment" class="comment">ふつう</div>
       </div>
 
       <div class="field">
-        <label>身体エネルギー (y軸: -100 〜 100)</label>
-        <div class="desc">下：ぐったり / 上：みなぎる</div>
-        <input type="range" id="energy" min="-100" max="100" value="0" oninput="updateLabels()">
+        <label>身体エネルギー (y: -100 〜 100)</label>
+        <input type="range" id="energy" min="-100" max="100" value="0" oninput="document.getElementById('en-val').innerText = this.value">
         <div id="en-val" class="val-display">0</div>
-        <div id="en-comment" class="comment">ふつう</div>
       </div>
 
-      <button onclick="submitData()">今の状態を記録</button>
+      <div class="field">
+        <label>ひとことメモ（点に表示されます）</label>
+        <input type="text" id="memo" placeholder="例：コーヒーを飲んだ、会議前">
+      </div>
+
+      <button onclick="submitData()">記録してグラフ更新</button>
 
       <div style="margin-top: 30px;">
         <canvas id="emotionChart"></canvas>
@@ -46,36 +46,7 @@
 
     <script>
       let chart;
-
-      // ラベルとコメントを更新する関数
-      function updateLabels() {
-        const em = document.getElementById('emotion').value;
-        const en = document.getElementById('energy').value;
-        
-        document.getElementById('em-val').innerText = em;
-        document.getElementById('en-val').innerText = en;
-
-        // 感情のコメント
-        let emText = "ふつう";
-        if (em <= -70) emText = "かなり しんどい";
-        else if (em < -20) emText = "ちょっと しんどい";
-        else if (em > 70) emText = "最高に うれしい";
-        else if (em > 20) emText = "うれしい";
-        document.getElementById('em-comment').innerText = emText;
-
-        // エネルギーのコメント
-        let enText = "ふつう";
-        if (en <= -70) enText = "動けない・ぐったり";
-        else if (en < -20) enText = "少し疲れ気味";
-        else if (en > 70) enText = "パワー全開！";
-        else if (en > 20) enText = "元気がある";
-        document.getElementById('en-comment').innerText = enText;
-      }
-
-      window.onload = () => { 
-        updateLabels();
-        google.script.run.withSuccessHandler(drawChart).getLogs(); 
-      };
+      window.onload = () => { google.script.run.withSuccessHandler(drawChart).getLogs(); };
 
       function drawChart(logs) {
         const ctx = document.getElementById('emotionChart').getContext('2d');
@@ -84,16 +55,27 @@
           type: 'scatter',
           data: {
             datasets: [{
-              label: '心のマップ',
-              data: logs.map(row => ({ x: row.emotion, y: row.energy })),
+              label: '心の状態',
+              data: logs.map(row => ({ x: row.emotion, y: row.energy, memo: row.memo })),
               backgroundColor: '#4CAF50',
-              pointRadius: 6
+              pointRadius: 8,
+              pointHoverRadius: 10
             }]
           },
           options: {
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: (context) => {
+                    const d = context.raw;
+                    return [`感情: ${d.x}`, `エネルギー: ${d.y}`, `メモ: ${d.memo || 'なし'}`];
+                  }
+                }
+              }
+            },
             scales: {
-              x: { title: { display: true, text: '感情 (←しんどい / うれしい→)' }, min: -100, max: 100 },
-              y: { title: { display: true, text: 'エネルギー (←疲れ / 元気→)' }, min: -100, max: 100 }
+              x: { title: { display: true, text: '感情' }, min: -100, max: 100 },
+              y: { title: { display: true, text: 'エネルギー' }, min: -100, max: 100 }
             }
           }
         });
@@ -102,10 +84,12 @@
       function submitData() {
         const data = {
           emotion: document.getElementById('emotion').value,
-          energy: document.getElementById('energy').value
+          energy: document.getElementById('energy').value,
+          memo: document.getElementById('memo').value
         };
         google.script.run.withSuccessHandler(() => {
           alert('記録しました！');
+          document.getElementById('memo').value = ''; // メモを空にする
           google.script.run.withSuccessHandler(drawChart).getLogs();
         }).recordToSheet(data);
       }
