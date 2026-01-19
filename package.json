@@ -1,0 +1,11 @@
+{
+  "name": "emotion-journal-app",
+  "version": "1.0.0",
+  "description": "AIによる感情分析とGitHub同期システム",
+  "main": "app.js",
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "author": "d3igurazu",
+  "license": "MIT"
+}
