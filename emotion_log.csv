@@ -1,0 +1,5 @@
+main.gs        // 起点・トリガー
+records.gs     // records 操作
+backup.gs      // CSVバックアップ
+github.gs      // GitHub / README生成
+utils.gs       // 共通関数
