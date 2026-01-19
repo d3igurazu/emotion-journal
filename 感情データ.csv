@@ -1,2 +1,5 @@
-日付,改善内容,詳細
-Mon Jan 19 2026 00:00:00 GMT+0900 (Japan Standard Time),ログ機能の追加,MANUSによる自動履歴記録機能を実装
+main.gs        // 起点・トリガー
+records.gs     // records 操作
+backup.gs      // CSVバックアップ
+github.gs      // GitHub / README生成
+utils.gs       // 共通関数
